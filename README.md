@@ -25,4 +25,4 @@ Encountered a bug? Please open an issue to help us resolve it.
 Have a question? (or just wanna talk), DM me on discord: @s.b
 
 ### Star
-Show some love with a ⭐️ because why not? ¯\_(ツ)_/¯
+Show some love with a ⭐️ because why not? ¯\\_(ツ)_/¯
