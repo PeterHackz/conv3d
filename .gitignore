@@ -1,3 +1,5 @@
 /.idea
-/output.json
 /qodana.yaml
+/test_models
+/outputs
+/conv3d.exe

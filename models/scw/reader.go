@@ -41,6 +41,9 @@ func (r *Reader) ReadUTF() (string, error) {
 }
 
 func (r *Reader) ReadUTFWithLength(length uint16) (string, error) {
+	if length == 0 {
+		return "", nil
+	}
 	data, err := r.Read(int(length))
 	if err != nil {
 		return "", err
@@ -70,6 +73,11 @@ func (r *Reader) ReadU8() (uint8, error) {
 		return 0, err
 	}
 	return data[0], nil
+}
+
+func (r *Reader) Seek(n int) {
+	r.offset += n
+	r.SkipBytes -= n
 }
 
 func (r *Reader) ReadBool() (bool, error) {

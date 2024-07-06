@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	model, err := models.LoadFromFile("test_geo.scw")
+	model, err := models.LoadFromFile("test_models/sample.scw")
 	if err != nil {
 		panic(err)
 	}

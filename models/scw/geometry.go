@@ -26,15 +26,28 @@ type Weight struct {
 	Weights [4]uint16
 }
 
-func (w *Weight) Decode(reader *Reader) (err error) {
+func (w *Weight) Decode(reader *Reader, scwVersion uint16) (err error) {
 	for i := range 4 {
 		if w.Joints[i], err = reader.ReadU8(); err != nil {
 			return
 		}
 	}
 
+	var readFn func() (uint16, error)
+
+	// scw v0 needs more work
+	// (it's support is planned)
+	if scwVersion == 0 {
+		readFn = func() (uint16, error) {
+			res, err := reader.ReadU8()
+			return uint16(res), err
+		}
+	} else {
+		readFn = reader.ReadU16
+	}
+
 	for i := range 4 {
-		if w.Weights[i], err = reader.ReadU16(); err != nil {
+		if w.Weights[i], err = readFn(); err != nil {
 			return
 		}
 	}
@@ -80,7 +93,7 @@ func (s *SourceArray) Decode(reader *Reader) (err error) {
 		if s.Data[i], err = reader.ReadI16(); err != nil {
 			return
 		}
-		s.Data[i] = int16(math.Round(float64(float32(s.Data[i]) * (s.Scale))))
+		s.Data[i] = int16(math.Round(float64(float32(s.Data[i]) * (s.Scale)))) // TODO: recheck this?
 	}
 	return
 }
@@ -95,6 +108,7 @@ func (i *IndexArray) Decode(reader *Reader) (err error) {
 	if i.Name, err = reader.ReadUTF(); err != nil {
 		return
 	}
+
 	var trianglesCount uint32
 	if trianglesCount, err = reader.ReadU32(); err != nil {
 		return
@@ -223,7 +237,7 @@ func (g *Geometry) Decode(reader *Reader) (err error) {
 
 	g.SkinWeights = make([]Weight, skinWeightsCount)
 	for i := range skinWeightsCount {
-		if err = g.SkinWeights[i].Decode(reader); err != nil {
+		if err = g.SkinWeights[i].Decode(reader, g.SCWFile.Version); err != nil {
 			return
 		}
 	}
