@@ -1,6 +1,6 @@
 # conv3d
 
-A Golang library for loading and parsing .scw model and animation files used in Supercell games.
+A Golang tool for loading and parsing .scw model and animation files used in Supercell games.
 
 ## Disclaimer
 This project is solely for educational purposes and must not be used for any malicious intent. Usage of this project is the sole responsibility of the user.
@@ -25,4 +25,4 @@ Encountered a bug? Please open an issue to help us resolve it.
 Have a question? (or just wanna talk), DM me on discord: @s.b
 
 ### Star
-Show some love with a ⭐️ because why not? ¯\_(ツ)_/¯
+Show some love with a ⭐️ because why not? ¯\\_(ツ)_/¯
