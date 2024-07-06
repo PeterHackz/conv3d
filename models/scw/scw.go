@@ -88,6 +88,7 @@ func (f *File) Load() (err error) {
 			}
 			f.Nodes = make([]Node, nodesCount)
 			for i := range nodesCount {
+				f.Nodes[i].SCWFile = f
 				if err = f.Nodes[i].Decode(reader); err != nil {
 					return
 				}

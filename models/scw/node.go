@@ -3,6 +3,7 @@ package scw
 import "fmt"
 
 type Node struct {
+	SCWFile          *File `json:"-"`
 	Name, ParentName string
 	Instances        []NodeInstance
 	Frames           []KeyFrame
@@ -30,7 +31,6 @@ type Quaternion struct {
 }
 
 func (f *KeyFrame) Decode(reader *Reader, u8 uint8, v58 uint16, Frames []KeyFrame) (err error) {
-	var rotation Quaternion
 	var val int16
 	if f.ID, err = reader.ReadU16(); err != nil {
 		return
@@ -44,24 +44,24 @@ func (f *KeyFrame) Decode(reader *Reader, u8 uint8, v58 uint16, Frames []KeyFram
 		if val, err = reader.ReadI16(); err != nil {
 			return
 		}
-		rotation.X = float32(val) * 0.000030758
+		f.Rotation.X = float32(val) * 0.000030758
 
 		if val, err = reader.ReadI16(); err != nil {
 			return
 		}
-		rotation.Y = float32(val) * 0.000030758
+		f.Rotation.Y = float32(val) * 0.000030758
 
 		if val, err = reader.ReadI16(); err != nil {
 			return
 		}
-		rotation.Z = float32(val) * 0.000030758
+		f.Rotation.Z = float32(val) * 0.000030758
 
 		if val, err = reader.ReadI16(); err != nil {
 			return
 		}
-		rotation.W = float32(val) * 0.000030758
+		f.Rotation.W = float32(val) * 0.000030758
 	} else {
-		rotation = Frames[0].Rotation
+		f.Rotation = Frames[0].Rotation
 	}
 
 	if v58 == 0 || (v61&2) != 0 {
@@ -170,6 +170,7 @@ func (n *NodeInstance) Decode(reader *Reader) (err error) {
 }
 
 func (n *Node) Decode(reader *Reader) (err error) {
+
 	if n.Name, err = reader.ReadUTF(); err != nil {
 		return
 	}
