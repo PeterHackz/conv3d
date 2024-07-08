@@ -9,6 +9,10 @@ type Header struct {
 	Unknown       int
 }
 
+func (h *Header) Tag() string {
+	return "HEAD"
+}
+
 func (h *Header) Decode(reader *Reader) (err error) {
 	h.Version, err = reader.ReadU16()
 	if err != nil {
