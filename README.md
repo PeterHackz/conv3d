@@ -40,7 +40,7 @@ This project is solely for educational purposes and must not be used for any mal
 - [ ] Support parsing of DAE and GLB/GLTF models
 - [ ] Develop a generalized model structure
 - [ ] Implement conversion between different model types (e.g., SCW to GLB)
-- [ ] Compute Node.FrameFlags to optimize the output (when frames properties, ex: Rotation are identical for the first frame)
+- [x] Compute Node.FrameFlags to optimize the output (when frames properties, ex: Rotation are identical for the first frame)
 
 ### Bugs
 Encountered a bug? Please open an issue to help us resolve it.
