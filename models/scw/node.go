@@ -1,6 +1,9 @@
 package scw
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type Node struct {
 	SCWFile          *File `json:"-"`
@@ -16,8 +19,19 @@ type KeyFrame struct {
 	Translation, Scale Vector3
 }
 
+// reference: https://golangbyexample.com/comparing-floating-point-numbers-go/
+const tolerance = 1e-9
+
+func areFloatsEqual(a, b float32) bool {
+	return math.Abs(float64(a-b)) <= tolerance
+}
+
 type Vector3 struct {
 	X, Y, Z float32
+}
+
+func (v *Vector3) Equals(other *Vector3) bool {
+	return areFloatsEqual(v.X, other.X) && areFloatsEqual(v.Y, other.Y) && areFloatsEqual(v.Z, other.Z)
 }
 
 // Quaternion q= w + xi + yj + zk
@@ -28,6 +42,10 @@ type Vector3 struct {
 type Quaternion struct {
 	Vector3
 	W float32
+}
+
+func (q *Quaternion) Equals(other *Quaternion) bool {
+	return q.Vector3.Equals(&other.Vector3) && areFloatsEqual(q.W, other.W)
 }
 
 func (f *KeyFrame) Decode(reader *Reader, u8 uint8, v58 uint16, Frames []KeyFrame) (err error) {
@@ -284,6 +302,81 @@ func (n *Node) Decode(reader *Reader) (err error) {
 	return
 }
 
+func computeFrameFlags(Frames []KeyFrame) byte {
+	flags := byte(0)
+
+	// check if all frames matches the properties (rotation, ...)  of the first frame
+	rotation := true
+	translationX := true
+	translationY := true
+	translationZ := true
+	scaleX := true
+	scaleY := true
+	scaleZ := true
+
+	firstFrame := Frames[0]
+
+	for _, frame := range Frames[1:] {
+		if rotation && !frame.Rotation.Equals(&firstFrame.Rotation) {
+			rotation = false
+		}
+
+		if translationX && !areFloatsEqual(frame.Translation.X, firstFrame.Translation.X) {
+			translationX = false
+		}
+
+		if translationY && !areFloatsEqual(frame.Translation.Y, firstFrame.Translation.Y) {
+			translationY = false
+		}
+
+		if translationZ && !areFloatsEqual(frame.Translation.Z, firstFrame.Translation.Z) {
+			translationZ = false
+		}
+
+		if scaleX && !areFloatsEqual(frame.Scale.X, firstFrame.Scale.X) {
+			scaleX = false
+		}
+
+		if scaleY && !areFloatsEqual(frame.Scale.Y, firstFrame.Scale.Y) {
+			scaleY = false
+		}
+
+		if scaleZ && !areFloatsEqual(frame.Scale.Z, firstFrame.Scale.Z) {
+			scaleZ = false
+		}
+	}
+
+	if rotation {
+		flags |= 1 << 0
+	}
+
+	if translationX {
+		flags |= 1 << 1
+	}
+
+	if translationY {
+		flags |= 1 << 2
+	}
+
+	if translationZ {
+		flags |= 1 << 3
+	}
+
+	if scaleX {
+		flags |= 1 << 4
+	}
+
+	if scaleY {
+		flags |= 1 << 5
+	}
+
+	if scaleZ {
+		flags |= 1 << 6
+	}
+
+	return flags
+}
+
 func (n *Node) Encode(writer *Writer) {
 	writer.WriteStringUTF(n.Name)
 	writer.WriteStringUTF(n.ParentName)
@@ -297,6 +390,12 @@ func (n *Node) Encode(writer *Writer) {
 	writer.WriteU16(uint16(len(n.Frames)))
 
 	if len(n.Frames) > 0 {
+		n.FramesFlags = 0
+
+		if len(n.Frames) > 1 {
+			n.FramesFlags = computeFrameFlags(n.Frames)
+		}
+
 		writer.WriteU8(n.FramesFlags)
 
 		for i, frame := range n.Frames {
