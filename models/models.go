@@ -12,6 +12,8 @@ import (
 // support for GLB/GLTF and SCW models is a priority
 type Model interface {
 	Load() error
+	LoadJSON() error
+	Encode() []byte
 }
 
 var formats = map[string]func(data []byte) Model{
@@ -35,6 +37,10 @@ func LoadFromFile(filename string) (Model, error) {
 	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.HasSuffix(filename, ".json") {
+		filename = filename[:len(filename)-len(".json")]
 	}
 
 	for k, v := range formats {

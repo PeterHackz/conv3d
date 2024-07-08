@@ -33,3 +33,12 @@ func (c *Camera3D) Decode(reader *Reader) (err error) {
 	}
 	return
 }
+
+func (c *Camera3D) Encode(writer *Writer) {
+	writer.WriteStringUTF(c.Name)
+	writer.WriteFloat(c.Yfov)
+	writer.WriteFloat(c.Xfov)
+	writer.WriteFloat(c.AspectRatio)
+	writer.WriteFloat(c.ZNear)
+	writer.WriteFloat(c.ZFar)
+}

@@ -2,7 +2,6 @@ package scw
 
 import (
 	"fmt"
-	"math"
 )
 
 type Geometry struct {
@@ -12,6 +11,7 @@ type Geometry struct {
 	// this was used in older versions of scw format
 	IgnoredMatrix Matrix4x4
 	Vertices      []SourceArray
+	HasBindMatrix bool
 	BindMatrix    Matrix4x4
 	Skins         struct {
 		Joints              []string
@@ -55,13 +55,32 @@ func (w *Weight) Decode(reader *Reader, scwVersion uint16) (err error) {
 	return
 }
 
+func (w *Weight) Encode(writer *Writer, scwVersion uint16) {
+	writer.WriteBytes(w.Joints[:])
+
+	var writeFn func(uint16)
+	_ = writeFn
+
+	if scwVersion == 0 {
+		writeFn = func(val uint16) {
+			writer.WriteU8(byte(val))
+		}
+	} else {
+		writeFn = writer.WriteU16
+	}
+
+	for i := range 4 {
+		writeFn(w.Weights[i])
+	}
+}
+
 type SourceArray struct {
 	Name        string
 	Index       byte
-	SourceIndex byte    // uh, it is used for TEXTCOORD I think?
-	Stride      byte    // stride(Color) / element size
-	Scale       float32 // this can always be 0?? (not saying it is)
-	Data        []int16 // vertex/coordinate data?
+	SourceIndex byte      // uh, it is used for TEXTCOORD I think?
+	Stride      byte      // stride(Color) / element size
+	Scale       float32   // this can always be 0?? (not saying it is)
+	Data        []float64 // vertex/coordinate data?
 }
 
 func (s *SourceArray) Decode(reader *Reader) (err error) {
@@ -77,9 +96,11 @@ func (s *SourceArray) Decode(reader *Reader) (err error) {
 	if s.Stride, err = reader.ReadU8(); err != nil {
 		return
 	}
+
 	if s.Scale, err = reader.ReadFloat(); err != nil {
 		return
 	}
+
 	var count uint32
 	if count, err = reader.ReadU32(); err != nil {
 		return
@@ -87,21 +108,45 @@ func (s *SourceArray) Decode(reader *Reader) (err error) {
 
 	count *= uint32(s.Stride)
 
-	s.Data = make([]int16, count)
+	s.Data = make([]float64, count)
 
+	var val int16
 	for i := range count {
-		if s.Data[i], err = reader.ReadI16(); err != nil {
+		if val, err = reader.ReadI16(); err != nil {
 			return
 		}
-		s.Data[i] = int16(math.Round(float64(float32(s.Data[i]) * (s.Scale)))) // TODO: recheck this?
+		s.Data[i] = float64(val) * float64(s.Scale)
 	}
+
 	return
+}
+
+func (s *SourceArray) Encode(writer *Writer) {
+	writer.WriteStringUTF(s.Name)
+
+	writer.WriteU8(s.Index)
+	writer.WriteU8(s.SourceIndex)
+	writer.WriteU8(s.Stride)
+	writer.WriteFloat(s.Scale)
+
+	count := uint32(len(s.Data))
+	count /= uint32(s.Stride)
+
+	writer.WriteU32(count)
+
+	for _, data := range s.Data {
+		val := int16(data / float64(s.Scale))
+		writer.WriteI16(val)
+	}
+
 }
 
 type IndexArray struct {
 	Name            string
 	IndexBufferSize byte
 	IndexBuffer     []uint32
+	TrianglesCount  uint32
+	InputsCount     byte
 }
 
 func (i *IndexArray) Decode(reader *Reader) (err error) {
@@ -109,13 +154,11 @@ func (i *IndexArray) Decode(reader *Reader) (err error) {
 		return
 	}
 
-	var trianglesCount uint32
-	if trianglesCount, err = reader.ReadU32(); err != nil {
+	if i.TrianglesCount, err = reader.ReadU32(); err != nil {
 		return
 	}
 
-	var inputsCount byte
-	if inputsCount, err = reader.ReadU8(); err != nil {
+	if i.InputsCount, err = reader.ReadU8(); err != nil {
 		return
 	}
 
@@ -123,38 +166,57 @@ func (i *IndexArray) Decode(reader *Reader) (err error) {
 		return
 	}
 
-	totalIndices := 3 * trianglesCount * uint32(inputsCount)
+	totalIndices := 3 * i.TrianglesCount * uint32(i.InputsCount)
 
 	i.IndexBuffer = make([]uint32, totalIndices)
 
-	switch i.IndexBufferSize {
-	case 1:
-		for v := range i.IndexBuffer {
+	for v := range i.IndexBuffer {
+		switch i.IndexBufferSize {
+		case 1:
 			var idx uint8
 			if idx, err = reader.ReadU8(); err != nil {
 				return
 			}
 			i.IndexBuffer[v] = uint32(idx)
-		}
-	case 2:
-		for v := range i.IndexBuffer {
+		case 2:
 			var idx uint16
 			if idx, err = reader.ReadU16(); err != nil {
 				return
 			}
 			i.IndexBuffer[v] = uint32(idx)
-		}
-	case 4:
-		for v := range i.IndexBuffer {
+		case 4:
 			if i.IndexBuffer[v], err = reader.ReadU32(); err != nil {
 				return
 			}
+		default:
+			return fmt.Errorf("unsupported index buffer size: %d", i.IndexBufferSize)
 		}
-	default:
-		return fmt.Errorf("unsupported index buffer size: %d", i.IndexBufferSize)
 	}
 
 	return
+}
+
+func (i *IndexArray) Encode(writer *Writer) {
+	writer.WriteStringUTF(i.Name)
+
+	writer.WriteU32(i.TrianglesCount)
+	writer.WriteU8(i.InputsCount)
+	writer.WriteU8(i.IndexBufferSize)
+
+	for v := range i.IndexBuffer {
+		switch i.IndexBufferSize {
+		case 1:
+			writer.WriteU8(byte(i.IndexBuffer[v]))
+		case 2:
+			writer.WriteU16(uint16(i.IndexBuffer[v]))
+		case 4:
+			writer.WriteU32(i.IndexBuffer[v])
+		default:
+			// this should not be reached unless manual bad modification for the model was done
+			panic(fmt.Errorf("unsupported index buffer size: %d", i.IndexBufferSize))
+		}
+	}
+
 }
 
 type Matrix4x4 [4][4]float32
@@ -167,6 +229,16 @@ func (m *Matrix4x4) Decode(reader *Reader) (err error) {
 	}
 	m.Transpose()
 	return nil
+}
+
+func (m *Matrix4x4) Encode(writer *Writer) {
+	// we do not want to transpose the original one in case the user wanted to use it somewhere else
+	// *after* encoding ,so we make a copy
+	matrix := *m
+	matrix.Transpose() // return it back to the original state before Decode
+	for i := 0; i < 16; i++ {
+		writer.WriteFloat(matrix[i/4][i%4])
+	}
 }
 
 func (m *Matrix4x4) Transpose() {
@@ -204,10 +276,9 @@ func (g *Geometry) Decode(reader *Reader) (err error) {
 		}
 	}
 
-	var b bool
-	if b, err = reader.ReadBool(); err != nil {
+	if g.HasBindMatrix, err = reader.ReadBool(); err != nil {
 		return err
-	} else if b {
+	} else if g.HasBindMatrix {
 		if err = g.BindMatrix.Decode(reader); err != nil {
 			return
 		}
@@ -255,4 +326,44 @@ func (g *Geometry) Decode(reader *Reader) (err error) {
 	}
 
 	return
+}
+
+func (g *Geometry) Encode(writer *Writer) {
+
+	writer.WriteStringUTF(g.Name)
+	writer.WriteStringUTF(g.Group)
+
+	if g.SCWFile.Version <= 1 {
+		g.IgnoredMatrix.Encode(writer)
+	}
+
+	writer.WriteU8(byte(len(g.Vertices)))
+
+	for _, sourceArray := range g.Vertices {
+		sourceArray.Encode(writer)
+	}
+
+	writer.WriteBool(g.HasBindMatrix)
+	if g.HasBindMatrix {
+		g.BindMatrix.Encode(writer)
+	}
+
+	writer.WriteU8(byte(len(g.Skins.Joints)))
+
+	for i, joint := range g.Skins.Joints {
+		writer.WriteStringUTF(joint)
+		g.Skins.InverseBindMatrices[i].Encode(writer)
+	}
+
+	writer.WriteU32(uint32(len(g.SkinWeights)))
+	for _, skinWeight := range g.SkinWeights {
+		skinWeight.Encode(writer, g.SCWFile.Version)
+	}
+
+	writer.WriteU8(byte(len(g.Materials)))
+
+	for _, mat := range g.Materials {
+		mat.Encode(writer)
+	}
+
 }

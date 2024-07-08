@@ -47,3 +47,14 @@ func (h *Header) Decode(reader *Reader) (err error) {
 	}
 	return
 }
+
+func (h *Header) Encode(writer *Writer) {
+	writer.WriteU16(h.Version)
+	writer.WriteU16(h.FrameRate)
+	writer.WriteU16(h.FirstFrame)
+	writer.WriteU16(h.LastFrame)
+	writer.WriteStringUTF(h.MaterialsFile)
+	if h.Unknown != -1 {
+		writer.WriteU8(byte(h.Unknown))
+	}
+}

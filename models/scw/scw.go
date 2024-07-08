@@ -1,8 +1,10 @@
 package scw
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 )
 
 var (
@@ -23,6 +25,26 @@ func New(data []byte) *File {
 	return &File{
 		reader: NewReader(data),
 	}
+}
+
+func (f *File) LoadJSON() (err error) {
+	if err = json.Unmarshal(f.reader.data, f); err != nil {
+		return err
+	}
+
+	for _, geom := range f.Geometries {
+		geom.SCWFile = f
+	}
+
+	for _, mat := range f.Materials {
+		mat.SCWFile = f
+	}
+
+	for _, node := range f.Nodes {
+		node.SCWFile = f
+	}
+
+	return nil
 }
 
 // Load loads a File, for now support of scw version 2 is under development
@@ -51,6 +73,7 @@ func (f *File) Load() (err error) {
 		if err != nil {
 			return err
 		}
+
 		prop, err = reader.ReadUTFWithLength(4)
 		reader.SkipBytes = int(length)
 		if err != nil {
@@ -102,11 +125,73 @@ func (f *File) Load() (err error) {
 		if reader.SkipBytes != 0 {
 			panic(fmt.Sprintf("failed to parse SCW model property infully, chunk: %s, bytes left: %d", prop, reader.SkipBytes))
 		}
+
 		_, err = reader.ReadU32() // crc32(prop + buffer)
+
 		if err != nil {
 			return
 		}
 	}
 
 	return
+}
+
+type SC3DProperty interface {
+	Encode(writer *Writer)
+}
+
+func encodeSC3DProperty(prop SC3DProperty, fileWriter *Writer, name string) {
+
+	w := NewWriter()
+	w.WriteStringChars(name)
+	prop.Encode(w)
+	bytes := w.Bytes()
+
+	fileWriter.WriteU32(uint32(len(bytes) - len(name)))
+	fileWriter.WriteBytes(bytes)
+
+	checksum := crc32.ChecksumIEEE(bytes)
+	fileWriter.WriteU32(checksum)
+
+}
+
+func (f *File) Encode() []byte {
+	writer := NewWriter()
+
+	writer.WriteStringChars("SC3D") // file magic
+
+	encodeSC3DProperty(&f.Header, writer, "HEAD")
+
+	for _, mat := range f.Materials {
+		encodeSC3DProperty(mat, writer, "MATE")
+	}
+
+	for _, cam := range f.Cameras {
+		encodeSC3DProperty(cam, writer, "CAME")
+	}
+
+	for _, geom := range f.Geometries {
+		encodeSC3DProperty(geom, writer, "GEOM")
+	}
+
+	// TODO: separate Node encoding to a different function
+	w := NewWriter()
+	w.WriteStringChars("NODE")
+	w.WriteU16(uint16(len(f.Nodes)))
+	for _, node := range f.Nodes {
+		node.Encode(w)
+	}
+	bytes := w.Bytes()
+
+	writer.WriteU32(uint32(len(bytes) - len("NODE")))
+	writer.WriteBytes(bytes)
+
+	checksum := crc32.ChecksumIEEE(bytes)
+	writer.WriteU32(checksum)
+
+	writer.WriteU32(0)
+	writer.WriteStringChars("WEND")
+	writer.WriteU32(crc32.ChecksumIEEE([]byte("WEND")))
+
+	return writer.Bytes()
 }
