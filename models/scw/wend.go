@@ -9,4 +9,4 @@ func (w *Wend) Tag() string {
 	return "WEND"
 }
 
-func (w *Wend) Encode(writer *Writer) {}
+func (w *Wend) Encode(_ *Writer) {}
