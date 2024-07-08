@@ -26,8 +26,8 @@ A Golang tool for loading and parsing .scw model and animation files used in Sup
 This project is solely for educational purposes and must not be used for any malicious intent. Usage of this project is the sole responsibility of the user.
 
 ### Features:
-- [x] Convert SCW models to JSON.
-- [x] Encode JSON output back into SCW.
+- Convert SCW models to JSON.
+- Encode JSON output back into SCW.
 
 ### Notice
 - Encoding JSON back into SCW is still experimental and was tested on 3 models. if you find any bug in the project, open an issue or message me on discord.
