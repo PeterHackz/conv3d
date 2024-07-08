@@ -52,11 +52,6 @@ func main() {
 		}
 	}
 
-	r, err := json.MarshalIndent(model, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-
 	file, err := os.Create(*outputFile)
 	if err != nil {
 		panic(err)
@@ -69,6 +64,11 @@ func main() {
 	}()
 
 	if outputJson {
+		r, err := json.MarshalIndent(model, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+
 		if _, err = file.WriteString(string(r)); err != nil {
 			panic(err)
 		}
