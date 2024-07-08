@@ -3,12 +3,20 @@
 A Golang tool for loading and parsing .scw model and animation files used in Supercell games.
 
 ### Usage
+- download the tool (check [Installation](#Installation)) or build it yourself (check [Building](#Building))
+- `./conv3d --help` shows the tool arguments
+- `./conv3d --in-file=sample.scw` loads your scw model and outputs an `output.scw.json` file
+- `./conv3d --in-file=output.scw.json --out-file=output.scw` loads the json output and encode it back to SCW
+
+### Installation
+- install the binary for your os from [releases](https://github.com/PeterHackz/conv3d/releases)
+
+**if your os is not there, you can [build](#Building) it yourself**
+
+### Building
 - you need to have golang installed (ofc...)
 - clone this repo
-- build it with `go build` or just run it with `go run main.go <args>
-- ```go run main.go --help``` shows the tool arguments
-- ```go run main.go --in-file=sample.scw``` loads your scw model and outputs an `output.scw.json` file
-- ```go run main.go --in-file=output.scw.json --out-file=output.scw``` loads the json output and encode it back to SCW
+- build it with `go build` or just run it with `go run main.go <args>`
 
 ### Extra Info
 - in-file is a needed argument, and out-file is optional (by default it uses output.scw.json or output.scw)
