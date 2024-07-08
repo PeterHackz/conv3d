@@ -30,7 +30,7 @@ type Weight struct {
 	Weights [4]uint16
 }
 
-func (w *Weight) Decode(reader *Reader, scwVersion uint16) (err error) {
+func (w *Weight) Decode(reader *Reader, scwVersion uint16, scwMinorVersion int) (err error) {
 	for i := range 4 {
 		if w.Joints[i], err = reader.ReadU8(); err != nil {
 			return
@@ -41,7 +41,7 @@ func (w *Weight) Decode(reader *Reader, scwVersion uint16) (err error) {
 
 	// scw v0 needs more work
 	// (it's support is planned)
-	if scwVersion == 0 {
+	if scwVersion == 0 && scwMinorVersion != 5 {
 		readFn = func() (uint16, error) {
 			res, err := reader.ReadU8()
 			return uint16(res), err
@@ -59,13 +59,13 @@ func (w *Weight) Decode(reader *Reader, scwVersion uint16) (err error) {
 	return
 }
 
-func (w *Weight) Encode(writer *Writer, scwVersion uint16) {
+func (w *Weight) Encode(writer *Writer, scwVersion uint16, scwMinorVersion int) {
 	writer.WriteBytes(w.Joints[:])
 
 	var writeFn func(uint16)
 	_ = writeFn
 
-	if scwVersion == 0 {
+	if scwVersion == 0 && scwMinorVersion != 5 {
 		writeFn = func(val uint16) {
 			writer.WriteU8(byte(val))
 		}
@@ -312,7 +312,7 @@ func (g *Geometry) Decode(reader *Reader) (err error) {
 
 	g.SkinWeights = make([]Weight, skinWeightsCount)
 	for i := range skinWeightsCount {
-		if err = g.SkinWeights[i].Decode(reader, g.SCWFile.Version); err != nil {
+		if err = g.SkinWeights[i].Decode(reader, g.SCWFile.Version, g.SCWFile.MinorVersion); err != nil {
 			return
 		}
 	}
@@ -361,7 +361,7 @@ func (g *Geometry) Encode(writer *Writer) {
 
 	writer.WriteU32(uint32(len(g.SkinWeights)))
 	for _, skinWeight := range g.SkinWeights {
-		skinWeight.Encode(writer, g.SCWFile.Version)
+		skinWeight.Encode(writer, g.SCWFile.Version, g.SCWFile.MinorVersion)
 	}
 
 	writer.WriteU8(byte(len(g.Materials)))

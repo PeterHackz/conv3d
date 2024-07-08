@@ -17,7 +17,8 @@ type File struct {
 	Materials  []*Material
 	Geometries []*Geometry
 	Scene
-	Cameras []*Camera3D
+	Cameras      []*Camera3D
+	MinorVersion int // used for versions under 2
 }
 
 func New(data []byte) *File {
@@ -39,8 +40,8 @@ func (f *File) LoadJSON() (err error) {
 		mat.SCWFile = f
 	}
 
-	for _, node := range f.Nodes {
-		node.SCWFile = f
+	for i := range f.Nodes {
+		f.Nodes[i].SCWFile = f
 	}
 
 	return nil
@@ -130,6 +131,10 @@ func (f *File) Load() (err error) {
 		if err != nil {
 			return
 		}
+	}
+
+	if f.Version == 2 {
+		f.MinorVersion = 0
 	}
 
 	return
