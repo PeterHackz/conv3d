@@ -22,14 +22,16 @@ type Material struct {
 }
 
 type Variable struct {
+	UseText2D bool
 	Texture2D string
 	Color     RGBA
 }
 
 func (v *Variable) Decode(reader *Reader) error {
-	if hasVariable, err := reader.ReadBool(); err != nil {
+	var err error
+	if v.UseText2D, err = reader.ReadBool(); err != nil {
 		return err
-	} else if hasVariable {
+	} else if v.UseText2D {
 		if v.Texture2D, err = reader.ReadUTF(); err != nil {
 			return err
 		}
@@ -37,6 +39,15 @@ func (v *Variable) Decode(reader *Reader) error {
 		return err
 	}
 	return nil
+}
+
+func (v *Variable) Encode(writer *Writer) {
+	writer.WriteBool(v.UseText2D)
+	if v.UseText2D {
+		writer.WriteStringUTF(v.Texture2D)
+	} else {
+		v.Color.Encode(writer)
+	}
 }
 
 type RGBA [4]byte
@@ -48,6 +59,10 @@ func (r *RGBA) Decode(reader *Reader) (err error) {
 		}
 	}
 	return
+}
+
+func (r *RGBA) Encode(writer *Writer) {
+	writer.WriteBytes(r[:])
 }
 
 func (m *Material) Decode(reader *Reader) (err error) {
@@ -133,4 +148,41 @@ func (m *Material) Decode(reader *Reader) (err error) {
 	}
 
 	return
+}
+
+func (m *Material) Encode(writer *Writer) {
+	writer.WriteStringUTF(m.Name)
+	writer.WriteStringUTF(m.ShaderFile)
+	writer.WriteU8(m.BlendMode)
+
+	m.Variables.Ambient.Encode(writer)
+	m.Variables.Diffuse.Encode(writer)
+	m.Variables.Specular.Encode(writer)
+
+	writer.WriteStringUTF(m.Variables.StencilTex2D)
+	writer.WriteStringUTF(m.Variables.NormalTex2D)
+
+	m.Variables.Colorize.Encode(writer)
+	m.Variables.Emission.Encode(writer)
+
+	writer.WriteStringUTF(m.Variables.OpacityTex2D)
+	writer.WriteFloat(m.Variables.Opacity)
+
+	writer.WriteFloat(m.Variables.Unk)
+
+	writer.WriteStringUTF(m.Variables.LightmapTex2D)
+	writer.WriteStringUTF(m.Variables.LightmapSpecularTex2D)
+
+	if m.SCWFile.Version >= 2 {
+		writer.WriteStringUTF(m.Variables.Unk2)
+	}
+
+	writer.WriteU32(m.ShaderConfig)
+
+	if m.ShaderConfig&0x8000 != 0 {
+		for i := range 4 {
+			writer.WriteFloat(m.StencilScaleOffset[i])
+		}
+	}
+
 }

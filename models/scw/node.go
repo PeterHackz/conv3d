@@ -115,6 +115,48 @@ func (f *KeyFrame) Decode(reader *Reader, u8 uint8, v58 uint16, Frames []KeyFram
 	return
 }
 
+func (f *KeyFrame) Encode(writer *Writer, u8 uint8, v58 uint16, Frames []KeyFrame) {
+	writer.WriteU16(f.ID)
+
+	_ = Frames
+
+	v61 := int(u8)
+	if v58 == 0 {
+		v61 = -1
+	}
+	if v58 == 0 || (v61&1) != 0 {
+		writer.WriteI16(int16(f.Rotation.X / 0.000030758))
+		writer.WriteI16(int16(f.Rotation.Y / 0.000030758))
+		writer.WriteI16(int16(f.Rotation.Z / 0.000030758))
+		writer.WriteI16(int16(f.Rotation.W / 0.000030758))
+	}
+
+	if v58 == 0 || (v61&2) != 0 {
+		writer.WriteFloat(f.Translation.X)
+	}
+
+	if v58 == 0 || (v61&4) != 0 {
+		writer.WriteFloat(f.Translation.Y)
+	}
+
+	if v58 == 0 || (v61&8) != 0 {
+		writer.WriteFloat(f.Translation.Z)
+	}
+
+	if v58 == 0 || (v61&0x10) != 0 {
+		writer.WriteFloat(f.Scale.X)
+	}
+
+	if v58 == 0 || (v61&0x20) != 0 {
+		writer.WriteFloat(f.Scale.Y)
+	}
+
+	if v58 == 0 || (v61&0x40) != 0 {
+		writer.WriteFloat(f.Scale.Z)
+	}
+
+}
+
 type NodeInstance struct {
 	Type, Target string
 	CameraTarget string
@@ -134,6 +176,11 @@ func (i *InstanceMaterial) Decode(reader *Reader) (err error) {
 		return
 	}
 	return
+}
+
+func (i *InstanceMaterial) Encode(writer *Writer) {
+	writer.WriteStringUTF(i.Name)
+	writer.WriteStringUTF(i.Target)
 }
 
 func (n *NodeInstance) Decode(reader *Reader) (err error) {
@@ -167,6 +214,26 @@ func (n *NodeInstance) Decode(reader *Reader) (err error) {
 		return fmt.Errorf("invalid or unsupported instance material type: %s", n.Type)
 	}
 	return
+}
+
+func (n *NodeInstance) Encode(writer *Writer) {
+	writer.WriteStringChars(n.Type)
+
+	writer.WriteStringUTF(n.Target)
+
+	switch n.Type {
+	case "GEOM", "CONT":
+		writer.WriteU16(uint16(len(n.Materials)))
+		for _, mat := range n.Materials {
+			mat.Encode(writer)
+		}
+	case "LIGH":
+		panic("LIGH is not supported yet")
+	case "CAME":
+		writer.WriteStringUTF(n.CameraTarget)
+	default:
+		panic(fmt.Errorf("invalid or unsupported instance material type: %s", n.Type))
+	}
 }
 
 func (n *Node) Decode(reader *Reader) (err error) {
@@ -215,4 +282,25 @@ func (n *Node) Decode(reader *Reader) (err error) {
 	}
 
 	return
+}
+
+func (n *Node) Encode(writer *Writer) {
+	writer.WriteStringUTF(n.Name)
+	writer.WriteStringUTF(n.ParentName)
+
+	writer.WriteU16(uint16(len(n.Instances)))
+
+	for _, instance := range n.Instances {
+		instance.Encode(writer)
+	}
+
+	writer.WriteU16(uint16(len(n.Frames)))
+
+	if len(n.Frames) > 0 {
+		writer.WriteU8(n.FramesFlags)
+
+		for i, frame := range n.Frames {
+			frame.Encode(writer, n.FramesFlags, uint16(i), n.Frames)
+		}
+	}
 }
