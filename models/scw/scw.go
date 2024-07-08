@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/crc32"
 )
 
 var (
@@ -17,8 +16,8 @@ type File struct {
 	Header
 	Materials  []*Material
 	Geometries []*Geometry
-	Nodes      []Node
-	Cameras    []*Camera3D
+	Scene
+	Cameras []*Camera3D
 }
 
 func New(data []byte) *File {
@@ -136,62 +135,28 @@ func (f *File) Load() (err error) {
 	return
 }
 
-type SC3DProperty interface {
-	Encode(writer *Writer)
-}
-
-func encodeSC3DProperty(prop SC3DProperty, fileWriter *Writer, name string) {
-
-	w := NewWriter()
-	w.WriteStringChars(name)
-	prop.Encode(w)
-	bytes := w.Bytes()
-
-	fileWriter.WriteU32(uint32(len(bytes) - len(name)))
-	fileWriter.WriteBytes(bytes)
-
-	checksum := crc32.ChecksumIEEE(bytes)
-	fileWriter.WriteU32(checksum)
-
-}
-
 func (f *File) Encode() []byte {
 	writer := NewWriter()
 
 	writer.WriteStringChars("SC3D") // file magic
 
-	encodeSC3DProperty(&f.Header, writer, "HEAD")
+	EncodeSc3dProperty(&f.Header, writer)
 
 	for _, mat := range f.Materials {
-		encodeSC3DProperty(mat, writer, "MATE")
+		EncodeSc3dProperty(mat, writer)
 	}
 
 	for _, cam := range f.Cameras {
-		encodeSC3DProperty(cam, writer, "CAME")
+		EncodeSc3dProperty(cam, writer)
 	}
 
 	for _, geom := range f.Geometries {
-		encodeSC3DProperty(geom, writer, "GEOM")
+		EncodeSc3dProperty(geom, writer)
 	}
 
-	// TODO: separate Node encoding to a different function
-	w := NewWriter()
-	w.WriteStringChars("NODE")
-	w.WriteU16(uint16(len(f.Nodes)))
-	for _, node := range f.Nodes {
-		node.Encode(w)
-	}
-	bytes := w.Bytes()
+	EncodeSc3dProperty(&f.Scene, writer)
 
-	writer.WriteU32(uint32(len(bytes) - len("NODE")))
-	writer.WriteBytes(bytes)
-
-	checksum := crc32.ChecksumIEEE(bytes)
-	writer.WriteU32(checksum)
-
-	writer.WriteU32(0)
-	writer.WriteStringChars("WEND")
-	writer.WriteU32(crc32.ChecksumIEEE([]byte("WEND")))
+	EncodeSc3dProperty(&Wend{}, writer)
 
 	return writer.Bytes()
 }

@@ -21,6 +21,10 @@ type Material struct {
 	StencilScaleOffset [4]float32
 }
 
+func (m *Material) Tag() string {
+	return "MATE"
+}
+
 type Variable struct {
 	UseText2D bool
 	Texture2D string

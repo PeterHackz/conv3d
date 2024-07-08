@@ -21,6 +21,10 @@ type Geometry struct {
 	Materials   []IndexArray
 }
 
+func (g *Geometry) Tag() string {
+	return "GEOM"
+}
+
 type Weight struct {
 	Joints  [4]byte
 	Weights [4]uint16

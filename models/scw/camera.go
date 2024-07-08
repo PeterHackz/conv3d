@@ -7,6 +7,10 @@ type Camera3D struct {
 	ZNear, ZFar float32
 }
 
+func (c *Camera3D) Tag() string {
+	return "CAME"
+}
+
 func (c *Camera3D) Decode(reader *Reader) (err error) {
 	if c.Name, err = reader.ReadUTF(); err != nil {
 		return
