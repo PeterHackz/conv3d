@@ -1,57 +1,48 @@
-# conv3d
+# Conv3D
 
-A Golang tool for loading and parsing .scw model and animation files used in Supercell games.
+Conv3D is a Go-based tool for the technical analysis, parsing, and serialization of SCW 3D model and animation data. It provides a bridge between specific binary schemas and structured formats like JSON, enabling inspection and version migration.
 
-### Features:
-- Convert SCW models to JSON.
-- Encode JSON output back into SCW.
-- Update or downgrade scw models
+### Core Features
+
+* **Binary Parsing:** Custom implementation for reading SCW geometry and animation data.
+* **Bidirectional Serialization:** Supports decoding binary files to JSON and encoding JSON back into the original format.
+* **Version Management:** Handles logic for various schema iterations (v0, v1, v2) including minor version delta-handling.
+* **Optimization:** Implements logic to compute `Node.FrameFlags` to reduce output size by identifying identical properties across animation frames.
 
 ### Usage
-- download the tool (check [Installation](#Installation)) or build it yourself (check [Building](#Building))
-- `./conv3d --help` shows the tool arguments
-- `./conv3d --in-file=sample.scw` loads your scw model and outputs an `output.scw.json` file
-- `./conv3d --in-file=output.scw.json --out-file=output.scw` loads the json output and encode it back to SCW
-- `./conv3d --in-file=file.scw --scw2scw` updates (or downgrades) a model scw version to another
 
-### Installation
-- install the binary for your os from [releases](https://github.com/PeterHackz/conv3d/releases)
+**Build from source:**
 
-**if your os is not there, you can [build](#Building) it yourself**
+```bash
+go build -o conv3d main.go
 
-### Building
-- you need to have golang installed (ofc...)
-- clone this repo
-- build it with `go build` or just run it with `go run main.go <args>`
+```
 
-### Extra Info
-- in-file is a needed argument, and out-file is optional (by default it uses output.scw.json or output.scw)
-- the json file should end with `.scw.json` and not only `.json`
-- the format passed through multiple minor versions during scw v0, which cannot be detected by checking the model itself. for now support for v0.5 (minor version guessed for the tool usage) which is considered from v8 till v12
-- you can pass this minor version with `--out-version=5` to specify this, which is the default for now as support for v0.0 (or other if any) is not added yet. major version will always be taken from the scw header
-- you can set `out-version` with `scw2scw` to choose if to update it or downgrade it (by default it updates to scw v2)
+**Commands:**
 
-## Disclaimer
-This project is solely for educational purposes and must not be used for any malicious intent. Usage of this project is the sole responsibility of the user.
+* **Decode:** `./conv3d --in-file=model.scw` (Outputs `model.scw.json`)
+* **Encode:** `./conv3d --in-file=model.scw.json --out-file=model.scw`
+* **Migrate:** `./conv3d --in-file=file.scw --scw2scw --out-version=2` (Updates/downgrades format versions)
 
-### Notice
-- Encoding JSON back into SCW is still experimental and was tested on 3 models. if you find any bug in the project, open an issue or message me on discord.
+### Implementation Objectives
 
-### TODO:
-- [ ] Test on SCW v1 models and animations
-- [x] Test on SCW v2 models/animations
-- [ ] Identify unknown field names
-- [ ] Better code documentation
-- [ ] Support parsing of DAE and GLB/GLTF models
-- [ ] Develop a generalized model structure
-- [ ] Implement conversion between different model types (e.g., SCW to GLB)
-- [x] Compute Node.FrameFlags to optimize the output (when frames properties, ex: Rotation are identical for the first frame)
+* **Data Integrity:** Ensuring lossless transitions during the encoding/decoding process.
+* **Schema Mapping:** Defining clear internal representations for cameras, materials, and meshes.
+* **Compatibility:** Providing a reliable way to maintain assets across different environment specifications.
 
-### Bugs
-Encountered a bug? Please open an issue to help us resolve it.
+### Project Status
 
-### Contact
-Have a question? (or just want to talk), DM me on discord: @s.b
+* [ ] Implement support for standard intermediate formats (GLB/GLTF).
+* [ ] Expand unit test coverage for the parsing engine.
+* [ ] Further document internal binary structures.
 
-### Star
-Show some love with a ⭐️ because why not? ¯\\_(ツ)_/¯
+---
+
+### Community & Contact
+
+* **Discord:** `@s.b`
+* **Community:** [discord.peterr.dev](https://www.google.com/search?q=https://discord.peterr.dev)
+
+### Support
+
+If this project served as a helpful reference for your own learning or research, feel free to leave a 🌟!
